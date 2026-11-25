@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Karasuno · Shell Sort</title>
+<style>
+:root{--bg:#fff7ed;--fg:#1c1917;--card:#fff;--ac:#ea580c;--onac:#fff;--mu:#78716c;--bd:#e7e5e4;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1917;--fg:#fafaf9;--card:#292524;--ac:#fb923c;--onac:#1c1917;--mu:#a8a29e;--bd:#44403c;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1c1917;--fg:#fafaf9;--card:#292524;--ac:#fb923c;--onac:#1c1917;--mu:#a8a29e;--bd:#44403c;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+[hidden]{display:none!important}
+main{max-width:760px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:8px 0 12px}h2{font-size:16px;margin:0 0 10px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+button{background:var(--ac);color:var(--onac);border:0;border-radius:10px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer}
+button.ghost{background:transparent;color:var(--fg);border:1px solid var(--bd)}
+.mu{color:var(--mu);font-size:14px;margin:8px 0 0}
+.who{display:flex;align-items:center;gap:10px}
+.av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:20px}
+.tx{min-height:110px;font-size:18px;margin:14px 0 0}
+.bars{display:flex;align-items:flex-end;gap:4px;height:230px;overflow-x:auto}
+.col{flex:1;min-width:44px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+.fill{width:100%;border-radius:6px 6px 0 0;display:flex;justify-content:center;transition:height .2s}
+.fill b{font-size:11px;color:#fff;margin-top:3px}
+.fill.hot{outline:3px solid var(--ac);outline-offset:2px}
+.lab{font-size:11px;margin-top:4px;color:var(--mu)}
+.info{min-height:24px;margin:12px 0 0;font-weight:600}
+.court{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:420px}
+.z{border:1px solid var(--bd);border-radius:10px;padding:8px 4px;text-align:center;font-size:14px}
+.z small{display:block;color:var(--mu)}
+.net{grid-column:1/-1;text-align:center;font-size:12px;color:var(--mu);border-bottom:3px solid var(--ac);padding-bottom:2px}
+.score{font-size:26px;font-weight:700;margin:8px 0}
+</style>
+</head>
+<body>
+<main>
+<section id="intro">
+  <h1>Karasuno · Shell Sort</h1>
+  <div class="card">
+    <div class="who"><div id="av" class="av"></div><b id="nm"></b></div>
+    <p id="tx" class="tx"></p>
+    <div class="row"><button id="nx">Siguiente ▶</button><button id="skip" class="ghost">Saltar intro</button></div>
+  </div>
+</section>
+
+<section id="game" hidden>
+  <h1>Karasuno · Shell Sort</h1>
+  <div class="card">
+    <h2>1. Ordenar a los jugadores por altura (cm)</h2>
+    <div id="bars" class="bars"></div>
+    <p id="info" class="info"></p>
+    <p id="stats" class="mu"></p>
+    <div class="row"><button id="mix">🔀 Mezclar</button><button id="step">Paso</button><button id="auto">▶ Auto</button></div>
+  </div>
+  <div id="post" hidden>
+    <div class="card">
+      <h2>2. Rotación inicial: los 6 más altos</h2>
+      <div id="court" class="court"></div>
+      <p class="mu">Los 3 más altos quedan en la red (zonas 4, 3, 2).</p>
+      <div class="row"><button id="rot">↻ Rotar</button></div>
+    </div>
+    <div class="card">
+      <h2>3. Banca: mini partido 2 vs 2 (a 5 puntos)</h2>
+      <div id="teams"></div>
+      <div id="score" class="score"></div>
+      <div class="row"><button id="serve">¡Saque!</button><button id="rst" class="ghost">Reiniciar</button></div>
+      <p id="log" class="mu"></p>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+// Alturas aproximadas (cm) de Karasuno; verificar en la wiki antes de entregar.
+const P = [["Hinata",162.8,"#ea580c"],["Kageyama",180.6,"#1e3a8a"],["Tsukishima",188.3,"#ca8a04"],["Yamaguchi",181.3,"#15803d"],["Tanaka",178.8,"#7c3aed"],["Nishinoya",159.3,"#dc2626"],["Asahi",184.7,"#0e7490"],["Daichi",176.9,"#334155"],["Sugawara",174.2,"#64748b"],["Ennoshita",175.7,"#a16207"]].map(([n,h,c]) => ({n,h,c}));
+const COL = Object.fromEntries(P.map(p => [p.n,p.c])); COL["Narrador"] = "#78716c";
+
+/* ---------- INTRO ---------- */
+const INTRO = [
+["Narrador","Preparatoria Karasuno, gimnasio principal. El equipo está desordenado y hay que armar la rotación del partido… ¡según la altura de cada jugador!"],
+["Hinata","¡Soy Hinata Shōyō! Mido 162,8 cm: soy de los más bajos, pero salto como nadie. ¡Hoy nos ordena el algoritmo Shell Sort!"],
+["Kageyama","Kageyama Tobio, armador. Shell Sort es una mejora del Insertion Sort: en vez de comparar solo vecinos, compara jugadores separados por una distancia llamada gap."],
+["Tsukishima","Tsukishima Kei. El gap empieza grande (n/2) y se reduce a la mitad en cada ronda hasta llegar a 1. Así, los jugadores muy lejos de su lugar llegan rápido."],
+["Daichi","Daichi, capitán. Con gap = 1 la fila ya está casi ordenada, y solo quedan ajustes pequeños entre vecinos."],
+["Nishinoya","¡Nishinoya, libero! Con la secuencia n/2 el peor caso es O(n²), pero en la práctica es mucho más rápido que Insertion Sort."],
+["Asahi","Al terminar, los 6 más altos formarán la rotación inicial y los 4 que sobran jugarán un partido 2 contra 2."],
+["Hinata","¡Entonces mezclemos a todos y a ordenar! ¡Vamos, Karasuno!"]
+];
+let li = 0, typing = null;
+function say() {
+  const [who, text] = INTRO[li];
+  $("nm").textContent = who; $("av").textContent = who[0]; $("av").style.background = COL[who];
+  let k = 0; clearInterval(typing); $("tx").textContent = "";
+  typing = setInterval(() => { $("tx").textContent = text.slice(0, ++k); if (k >= text.length) { clearInterval(typing); typing = null; } }, 18);
+  $("nx").textContent = li === INTRO.length - 1 ? "Jugar ▶" : "Siguiente ▶";
+}
+function startGame() { clearInterval(typing); $("intro").hidden = true; $("game").hidden = false; reset(); }
+$("nx").onclick = () => {
+  if (typing) { clearInterval(typing); typing = null; $("tx").textContent = INTRO[li][1]; return; }
+  if (li < INTRO.length - 1) { li++; say(); } else startGame();
+};
+$("skip").onclick = startGame;
+say();
+
+/* ---------- SHELL SORT (generador: cada yield = un paso visible) ---------- */
+function* shell(a) {
+  a = [...a]; const n = a.length; let c = 0, s = 0;
+  for (let g = n >> 1; g > 0; g >>= 1) {
+    yield {a:[...a], hi:[], note:`Nueva ronda: gap = ${g}`, c, s};
+    for (let i = g; i < n; i++) {
+      let j = i;
+      while (j >= g) {
+        c++;
+        yield {a:[...a], hi:[j, j - g], note:`gap ${g}: comparo ${a[j-g].n} (${a[j-g].h}) con ${a[j].n} (${a[j].h})`, c, s};
+        if (a[j-g].h > a[j].h) {
+          [a[j], a[j-g]] = [a[j-g], a[j]]; s++;
+          yield {a:[...a], hi:[j, j - g], note:`Intercambio: ${a[j-g].n} sube a la posición ${j-g+1}`, c, s};
+          j -= g;
+        } else break;
+      }
+    }
+  }
+  yield {a:[...a], hi:[], note:"¡Listo! Ordenados de menor a mayor altura", c, s, done:true};
+}
+
+/* ---------- UI DEL ORDENAMIENTO ---------- */
+let arr, gen, timer = null, sorted = [];
+const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+function draw(a, hi = []) {
+  $("bars").innerHTML = a.map((p, k) => `<div class="col"><div class="fill${hi.includes(k) ? " hot" : ""}" style="height:${(p.h - 140) * 3.2}px;background:${p.c}"><b>${p.h}</b></div><span class="lab">${p.n}</span></div>`).join("");
+}
+function stop() { clearInterval(timer); timer = null; $("auto").textContent = "▶ Auto"; }
+function reset() {
+  stop(); arr = shuffle(P); gen = shell(arr); draw(arr);
+  $("info").textContent = "Pulsa Paso o Auto para empezar"; $("stats").textContent = "";
+  $("post").hidden = true; $("step").disabled = $("auto").disabled = false;
+}
+function step() {
+  const r = gen.next(); if (r.done) return; const st = r.value;
+  draw(st.a, st.hi); $("info").textContent = st.note;
+  $("stats").textContent = `Comparaciones: ${st.c} · Intercambios: ${st.s}`;
+  if (st.done) { stop(); $("step").disabled = $("auto").disabled = true; finish(st.a); }
+}
+$("mix").onclick = reset;
+$("step").onclick = step;
+$("auto").onclick = () => { if (timer) return stop(); $("auto").textContent = "⏸ Pausa"; timer = setInterval(step, 380); };
+
+/* ---------- ROTACIÓN Y MINI PARTIDO ---------- */
+const RING = [4,3,2,1,6,5], GRID = [4,3,2,5,6,1];
+let court, A, B, sa, sb;
+function finish(s) {
+  sorted = s; const d = [...s].reverse(); // de mayor a menor
+  court = {3:d[0], 4:d[1], 2:d[2], 6:d[3], 5:d[4], 1:d[5]};
+  drawCourt(); resetMatch(); $("post").hidden = false;
+  $("post").scrollIntoView({behavior:"smooth", block:"nearest"});
+}
+function drawCourt() {
+  $("court").innerHTML = `<div class="net">RED</div>` + GRID.map(z => `<div class="z"><small>Zona ${z}</small><b>${court[z].n}</b><small>${court[z].h} cm</small></div>`).join("");
+}
+$("rot").onclick = () => {
+  const nw = {}; RING.forEach((z, k) => nw[RING[(k + 1) % 6]] = court[z]); court = nw; drawCourt();
+};
+function resetMatch() {
+  const b = sorted.slice(0, 4);       // los 4 más bajos quedan en banca
+  A = [b[0], b[3]]; B = [b[1], b[2]]; // equipos balanceados por altura
+  sa = sb = 0; $("serve").disabled = false; $("log").textContent = "";
+  $("teams").innerHTML = `<p><b>Equipo A:</b> ${A.map(p => p.n).join(" y ")} (${A[0].h + A[1].h} cm)<br><b>Equipo B:</b> ${B.map(p => p.n).join(" y ")} (${B[0].h + B[1].h} cm)</p>`;
+  showScore();
+}
+const showScore = () => $("score").textContent = `A ${sa} – ${sb} B`;
+$("serve").onclick = () => {
+  const ha = A[0].h + A[1].h, hb = B[0].h + B[1].h;
+  const aWins = Math.random() < ha / (ha + hb);
+  aWins ? sa++ : sb++; showScore();
+  const w = aWins ? A : B;
+  $("log").textContent = `Punto para ${aWins ? "A" : "B"}: remate de ${w[Math.random() * 2 | 0].n}`;
+  if (sa === 5 || sb === 5) { $("serve").disabled = true; $("log").textContent = `¡Gana el equipo ${sa === 5 ? "A" : "B"}! Fin del partido de la banca.`; }
+};
+$("rst").onclick = resetMatch;
+</script>
+</body>
+</html>
